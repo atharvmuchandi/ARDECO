@@ -11,13 +11,11 @@ sam.to(device="cpu")
 
 predictor = SamPredictor(sam)
 
-# === Helper function to apply color mask ===
 def apply_color_mask(frame, mask, color=(255, 200, 200), alpha=0.7):
     colored_frame = frame.copy()
     colored_frame[mask] = (np.array(color) * alpha + colored_frame[mask] * (1 - alpha)).astype(np.uint8)
     return colored_frame
 
-# === Function to detect face (OpenCV Haar Cascade) ===
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 def detect_face_mask(frame):
@@ -26,18 +24,17 @@ def detect_face_mask(frame):
 
     face_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
     for (x, y, w, h) in faces:
-        cv2.rectangle(face_mask, (x, y), (x + w, y + h), 255, -1)  # Draw white box over face
+        cv2.rectangle(face_mask, (x, y), (x + w, y + h), 255, -1)  
     return face_mask
 
-# === Function to segment wall area ===
+
 def get_wall_mask(frame):
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     predictor.set_image(image_rgb)
-
-    # Place points near edges where walls are likely to appear (away from center/face)
+    
     input_points = np.array([
-        [50, 50], [frame.shape[1] - 50, 50],  # Top-left & Top-right corners
-        [50, frame.shape[0] - 50], [frame.shape[1] - 50, frame.shape[0] - 50]  # Bottom-left & Bottom-right corners
+        [50, 50], [frame.shape[1] - 50, 50], 
+        [50, frame.shape[0] - 50], [frame.shape[1] - 50, frame.shape[0] - 50]  
     ])
     input_labels = np.array([1, 1, 1, 1])
 
@@ -47,24 +44,23 @@ def get_wall_mask(frame):
         multimask_output=True
     )
 
-    # Combine all masks into one
     combined_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
     for mask in masks:
         combined_mask = np.logical_or(combined_mask, mask)
 
     return combined_mask
 
-# === Filter small unwanted masks (like face-sized objects) ===
+
 def filter_small_masks(mask, min_area=20000):
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
 
     filtered_mask = np.zeros_like(mask)
-    for i in range(1, num_labels):  # Ignore background (label 0)
+    for i in range(1, num_labels): 
         if stats[i, cv2.CC_STAT_AREA] >= min_area:
             filtered_mask[labels == i] = 1
     return filtered_mask.astype(bool)
 
-# === Webcam Processing ===
+# === Webcamara Processing ===
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
